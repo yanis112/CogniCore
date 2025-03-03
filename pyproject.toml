@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "free_llm_toolbox"
+version = "0.1.0"
+description = "A Python toolbox for easy interaction with various LLMs and Vision models"
+readme = "README.md"
+authors = [{ name = "Yanis" }]
+license = "MIT"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+keywords = ["llm", "ai", "vision", "machine-learning", "text-generation"]
+dependencies = [
+    "torch>=2.0.0",
+    "transformers>=4.0.0",
+    "python-dotenv>=0.19.0",
+    "pydantic>=2.0.0",
+    "langchain-core>=0.1.0",
+    "groq>=0.4.0",
+    "google-generativeai>=0.3.0",
+    "Pillow>=9.0.0",
+    "jsonschema==3.2.0",
+    "pytest>=8.3.4",
+]
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-cov>=4.0", "black>=23.0", "isort>=5.0"]
+
+[project.urls]
+Homepage = "https://github.com/username/free_llm_toolbox"
+Repository = "https://github.com/username/free_llm_toolbox"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]

@@ -1,0 +1,1 @@
+Always use astra uv for installing Python modules with uv add or uv pip install; do not use pip installations.
