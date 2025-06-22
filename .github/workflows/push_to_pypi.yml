@@ -22,13 +22,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v1
 
       # CORRECTION : Créer, activer, installer et tester dans la MÊME étape
       - name: Install dependencies and run tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           # 1. Créer l'environnement virtuel
           uv venv
@@ -54,7 +56,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v1
