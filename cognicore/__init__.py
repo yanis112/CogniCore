@@ -2,7 +2,15 @@
 Free LLM Toolbox - A Python package for easy interaction with various LLMs and Vision models
 """
 
-__version__ = "0.1.9"  # Mettez à jour la version!
+# La version est maintenant gérée dynamiquement par hatch-vcs.
+# Ce code tente d'importer la version depuis le fichier __version__.py,
+# qui est généré automatiquement lors de la construction du package.
+try:
+    from .__version__ import __version__
+except ImportError:
+    # En cas d'échec (par exemple, si le package n'est pas installé),
+    # on définit une version par défaut.
+    __version__ = "0.0.0"
 
 __all__ = [
     "LanguageModel",

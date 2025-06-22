@@ -19,6 +19,9 @@ jobs:
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
+        with:
+          # Récupérer l'historique complet pour que hatch-vcs puisse déterminer la version.
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5

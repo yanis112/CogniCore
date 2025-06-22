@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "cognicore"
-version = "0.1.9"  # Incrémentation de la version
+dynamic = ["version"]
 description = "A Python toolbox for easy interaction with various LLMs and Vision models"
 readme = "README.md"
 authors = [{ name = "Yanis112" }]
@@ -50,7 +50,12 @@ dev = ["pytest>=7.0", "pytest-cov>=4.0", "black>=23.0", "isort>=5.0"]
 Homepage = "https://github.com/username/cognicore"
 Repository = "https://github.com/username/cognicore"
 
-# Mise à jour pour utiliser la nouvelle structure
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "cognicore/__version__.py"
+
 [tool.hatch.build]
 packages = ["cognicore"]
 
