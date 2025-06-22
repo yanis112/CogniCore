@@ -1,13 +1,13 @@
 # Nom du workflow
 name: Publish Python Package to PyPI with UV
 
-# Déclencheur : push sur un tag commençant par 'v'
+# Déclencheurs
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch: # Ajout du déclencheur manuel pour les tests
 
-# Définition des permissions
 permissions:
   id-token: write
 
@@ -27,16 +27,20 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v1
 
-      # CORRECTION : Créer l'environnement virtuel avant d'installer quoi que ce soit
-      - name: Create a virtual environment
-        run: uv venv
-
-      # Cette commande va maintenant fonctionner car uv détectera le .venv créé
-      - name: Install dependencies with uv
-        run: uv pip install -e ".[dev]"
-
-      - name: Run tests with pytest
-        run: pytest
+      # CORRECTION : Créer, activer, installer et tester dans la MÊME étape
+      - name: Install dependencies and run tests
+        run: |
+          # 1. Créer l'environnement virtuel
+          uv venv
+          
+          # 2. Activer l'environnement virtuel (crucial !)
+          source .venv/bin/activate
+          
+          # 3. Installer les dépendances dans le venv activé
+          uv pip install -e ".[dev]"
+          
+          # 4. Lancer les tests dans le venv activé
+          pytest
 
   # --- JOB 2: CONSTRUIRE ET PUBLIER LE PACKAGE ---
   publish:
@@ -54,16 +58,21 @@ jobs:
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v1
-        
-      # CORRECTION : Créer aussi un environnement virtuel dans ce job
-      - name: Create a virtual environment
-        run: uv venv
 
-      - name: Install build tools with uv
-        run: uv pip install build twine
-
-      - name: Build package
-        run: python -m build
-
-      - name: Publish package to PyPI
-        run: twine upload dist/* --username __token__ --password ${{ secrets.PYPI_API_TOKEN }}
+      # CORRECTION : Créer, activer, installer, construire et publier dans la MÊME étape
+      - name: Build and publish package
+        run: |
+          # 1. Créer l'environnement virtuel
+          uv venv
+          
+          # 2. Activer l'environnement virtuel
+          source .venv/bin/activate
+          
+          # 3. Installer les outils de build
+          uv pip install build twine
+          
+          # 4. Construire le package
+          python -m build
+          
+          # 5. Publier sur PyPI
+          twine upload dist/* --username __token__ --password ${{ secrets.PYPI_API_TOKEN }}
