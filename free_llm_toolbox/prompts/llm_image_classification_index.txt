@@ -1,0 +1,1 @@
+I will give you an image and you will answer only the associated class index (as a single integer, no preamble, no explanation). Here are the labels of each class along with a precise description of the class: {labels_dict} . Answer the most plausible class index (as an integer, nothing else). 

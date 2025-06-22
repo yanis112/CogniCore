@@ -35,14 +35,17 @@ CEREBRAS_API_KEY=your_cerebras_key
 ### Text Generation
 
 ```python
-from free_llm_toolbox import LLM_answer_v3
+from free_llm_toolbox import LanguageModel
 
-response = LLM_answer_v3(
-    prompt="What is the capital of France?",
-    model_name="llama2",
-    llm_provider="ollama",
+# Initialize a session with your preferred model
+session = LanguageModel(
+    model_name="gemini-2.0-flash",
+    provider="google",
     temperature=0.7
 )
+
+# Generate a response
+response = session.answer("What is the capital of France?")
 print(response)
 ```
 
@@ -209,3 +212,179 @@ Contributions are welcome! Feel free to:
 ## License 📄
 
 This project is licensed under the MIT License. See the LICENSE file for details.
+
+## Flexible Configuration ⚡
+
+You can initialize both `LanguageModel` and `ImageAnalyzerAgent` in three ways:
+
+1. **Manual arguments** (classic Python style):
+   ```python
+   from free_llm_toolbox import LanguageModel
+   llm = LanguageModel(
+       model_name="llama-3.3-70b-versatile",
+       provider="groq",
+       temperature=0.7,
+       max_tokens=1024,
+   )
+   ```
+2. **With a configuration dictionary** (useful for programmatic config or dynamic settings):
+   ```python
+   config = {
+       'model_name': 'llama-3.3-70b-versatile',
+       'llm_provider': 'groq',
+       'temperature': 0.7,
+       'max_tokens': 1024,
+   }
+   llm = LanguageModel(config=config)
+   ```
+3. **With a YAML config file path** (for reproducibility, sharing, and easy experiment management):
+   ```python
+   llm = LanguageModel(config="exemple_config.yaml")
+   # The YAML file should contain keys like model_name, llm_provider, temperature, etc.
+   ```
+
+The same logic applies to `ImageAnalyzerAgent`:
+```python
+analyzer = ImageAnalyzerAgent(config="exemple_config.yaml")
+```
+
+**Why is this useful?**
+- You can easily switch between experiments by changing a config file, not your code.
+- Share your settings with collaborators or for reproducibility.
+- Centralize all your model and generation parameters in one place.
+- Use the same config for both text and vision models.
+
+## Multi-Image Support for Vision Models 🖼️🖼️
+
+For some providers (notably **Gemini** and **Groq**), you can pass either a single image path or a list of image paths to the `describe` method:
+
+```python
+# Single image
+result = analyzer.describe("path/to/image1.jpg", prompt="Describe this image", vllm_provider="gemini")
+
+# Multiple images (Gemini or Groq only)
+result = analyzer.describe([
+    "path/to/image1.jpg",
+    "path/to/image2.jpg"
+], prompt="Describe both images", vllm_provider="groq")
+```
+
+> **Note:** Passing multiple images is only supported for providers that support it (currently Gemini and Groq). For other providers, only a single image path (str) is accepted.
+
+## Text Classification Utility: `TextClassifier`
+
+`TextClassifier` est une classe utilitaire permettant de classifier un texte parmi une liste de classes définies (index, nom, description). Elle hérite de `LanguageModel` et repose donc sur la même interface flexible (arguments manuels, dictionnaire de config, ou chemin de config YAML).
+
+- **Héritage** : `TextClassifier` hérite de `LanguageModel` pour profiter de toute la logique d'appel LLM multi-provider.
+- **Utilisation** : Fournissez un dictionnaire de classes (ou configurez-le dans le YAML), et utilisez la méthode `.classify()` pour obtenir l'index ou le nom de la classe prédite.
+- **Prompts** : Les prompts utilisés pour la classification sont stockés dans le dossier `prompts`.
+- **Paramètres** : Les paramètres spécifiques à la classification sont à placer dans la section `text_classifier_utils.py` de la config (voir exemple ci-dessous).
+
+### Exemple d'utilisation
+
+```python
+from free_llm_toolbox.text_classifier_utils import TextClassifier
+
+# Utilisation avec un fichier de config YAML
+classifier = TextClassifier(config="exemple_config.yaml")
+texte = "Je cherche un emploi à Paris."
+print("Index de classe :", classifier.classify(texte))
+print("Nom de classe :", classifier.classify(texte, return_class_name=True))
+```
+
+### Exemple de section config (extrait de `exemple_config.yaml`)
+
+```yaml
+# Paramètres pour text_classifier_utils.py
+classification_labels_dict: {
+  0: {"class_name": "question", "description": "A general question about any topic."},
+  1: {"class_name": "job_search", "description": "A request related to job searching or job offers."},
+  2: {"class_name": "internet_search", "description": "A request to search for information on the internet."}
+}
+classifier_system_prompt: "You are an agent in charge of classifying user's queries into different categories of tasks."
+query_classification_model: "meta-llama/llama-4-scout-17b-16e-instruct"
+query_classification_provider: "groq"
+```
+
+- Les paramètres passés explicitement à la classe sont prioritaires sur ceux de la config.
+- Les prompts sont à placer dans le dossier `prompts`.
+
+## Image Classification Utility: `ImageClassifier`
+
+`ImageClassifier` est une classe utilitaire permettant de classifier une image parmi une liste de classes définies (index, nom, description). Elle hérite de `ImageAnalyzerAgent` (voir vision_utils.py) et repose donc sur la même interface flexible (arguments manuels, dictionnaire de config, ou chemin de config YAML).
+
+- **Héritage** : `ImageClassifier` hérite de `ImageAnalyzerAgent` pour profiter de toute la logique d'appel vision multi-provider.
+- **Utilisation** : Fournissez un dictionnaire de classes (ou configurez-le dans le YAML), et utilisez la méthode `.classify()` pour obtenir l'index ou le nom de la classe prédite pour une image.
+- **Prompts** : Les prompts utilisés pour la classification sont stockés dans le dossier `prompts`.
+- **Paramètres** : Les paramètres spécifiques à la classification d'image sont à placer dans la section `image_classifier_utils.py` de la config (voir exemple ci-dessous).
+
+### Exemple d'utilisation
+
+```python
+from free_llm_toolbox.image_classifier_utils import ImageClassifier
+
+# Utilisation avec un fichier de config YAML
+classifier = ImageClassifier(config="exemple_config.yaml")
+image_path = "test_data/chat.jpg"
+print("Index de classe :", classifier.classify(image_path))
+print("Nom de classe :", classifier.classify(image_path, return_class_name=True))
+```
+
+### Exemple de section config (extrait de `exemple_config.yaml`)
+
+```yaml
+# Paramètres pour image_classifier_utils.py
+image_classification_labels_dict: {
+  0: {"class_name": "animal", "description": "Image contenant un animal."},
+  1: {"class_name": "ville", "description": "Image représentant une ville ou un lieu urbain."},
+  2: {"class_name": "autre", "description": "Tout autre type d'image."}
+}
+image_classifier_system_prompt: "You are an agent in charge of classifying images into different categories."
+image_classification_model: "gemini-1.5-flash"
+image_classification_provider: "gemini"
+```
+
+- Les paramètres passés explicitement à la classe sont prioritaires sur ceux de la config.
+- Les prompts sont à placer dans le dossier `prompts`.
+
+## Internet Search Utility: `InternetSearcher`
+
+`InternetSearcher` is a utility class designed to leverage LLMs with web-browsing capabilities to answer queries based on up-to-date information from the internet. It currently uses Groq's `compound-beta` model, which can access the web.
+
+- **Functionality**: Takes a prompt and returns an answer synthesized from internet search results.
+- **Configuration**: Like other utilities in this toolbox, it can be configured via direct arguments, a dictionary, or a YAML file.
+- **Streaming**: Supports streaming responses for real-time output.
+
+### Usage Example
+
+```python
+from free_llm_toolbox import InternetSearcher
+
+# Initialize with default settings (Groq's compound-beta)
+searcher = InternetSearcher()
+
+# Or initialize with a config file
+# searcher = InternetSearcher(config="exemple_config.yaml")
+
+prompt = "What are the latest advancements in battery technology for electric vehicles in 2024?"
+
+# Get a direct answer
+result = searcher.search(prompt)
+print(result)
+
+# Stream the answer
+print("\n--- Streaming ---")
+for chunk in searcher.search(prompt, stream=True):
+    print(chunk, end="", flush=True)
+```
+
+### Configuration in `exemple_config.yaml`
+
+To configure the `InternetSearcher`, you can add the following keys to your YAML file:
+
+```yaml
+# Parameters for InternetSearcher
+internet_search_model: "compound-beta"
+internet_search_provider: "groq"
+# You can also override temperature, max_tokens, etc.
+```

@@ -6,7 +6,20 @@ from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_core.tools.structured import StructuredTool
 from langchain_core.utils.function_calling import convert_to_openai_function
+from langchain_core.output_parsers import JsonOutputParser
+from langchain.schema import StrOutputParser
+import yaml
 
+# Import all providers at the top level
+import subprocess
+from langchain_groq import ChatGroq
+from langchain_community.chat_models.sambanova import ChatSambaNovaCloud
+from langchain_google_genai import ChatGoogleGenerativeAI, HarmBlockThreshold, HarmCategory
+from langchain_ollama import ChatOllama
+from langchain_cerebras import ChatCerebras
+import ollama
+
+# Load environment variables
 load_dotenv()
 
 class LanguageModel:
@@ -38,14 +51,34 @@ class LanguageModel:
     
     def __init__(
         self,
-        model_name: str,
-        provider: str,
+        model_name: str = None,
+        provider: str = None,
         temperature: float = 1.0,
         max_tokens: int = 20000,
         top_k: int = 45,
         top_p: float = 0.95,
-        system_prompt: Optional[str] = None
+        system_prompt: Optional[str] = None,
+        config: Optional[Union[dict, str]] = None
     ):
+        # Gestion de la config
+        if config is not None:
+            if isinstance(config, str):
+                with open(config, 'r', encoding='utf-8') as f:
+                    config_dict = yaml.safe_load(f)
+            elif isinstance(config, dict):
+                config_dict = config
+            else:
+                raise ValueError("config must be a dict, a yaml path (str), or None")
+            # On surcharge les arguments
+            model_name = config_dict.get('model_name', model_name)
+            provider = config_dict.get('llm_provider', provider)
+            temperature = config_dict.get('temperature', temperature)
+            max_tokens = config_dict.get('max_tokens', max_tokens)
+            top_k = config_dict.get('top_k', top_k)
+            top_p = config_dict.get('top_p', top_p)
+            system_prompt = config_dict.get('system_prompt', system_prompt)
+        if model_name is None or provider is None:
+            raise ValueError("model_name and provider must be specified, either directly or via config")
         self.model_name = model_name
         self.provider = provider
         self.temperature = temperature
@@ -59,9 +92,7 @@ class LanguageModel:
     def _initialize_model(self) -> None:
         """Initializes the language model based on the specified provider."""
         
-        
         if self.provider == "groq":
-            from langchain_groq import ChatGroq
             self.context_window_size = 131072
             self.chat_model = ChatGroq(
                 temperature=self.temperature,
@@ -71,7 +102,6 @@ class LanguageModel:
             )
 
         elif self.provider == "sambanova":
-            from langchain_community.chat_models.sambanova import ChatSambaNovaCloud
             os.environ["SAMBANOVA_API_KEY"] = os.getenv("SAMBANOVA_API_KEY")
             self.context_window_size = 8000
             self.chat_model = ChatSambaNovaCloud(
@@ -94,7 +124,6 @@ class LanguageModel:
             )
 
         elif self.provider == "google":
-            from langchain_google_genai import ChatGoogleGenerativeAI, HarmBlockThreshold, HarmCategory
             self.chat_model = ChatGoogleGenerativeAI(
                 model=self.model_name,
                 temperature=self.temperature,
@@ -109,8 +138,6 @@ class LanguageModel:
             )
 
         elif self.provider == "ollama":
-            import ollama
-            from langchain_ollama import ChatOllama
             self._ensure_model_pulled()
             template = ollama.show(self.model_name)["template"]
             self.context_window_size = 8192
@@ -123,7 +150,6 @@ class LanguageModel:
             )
 
         elif self.provider == "cerebras":
-            from langchain_cerebras import ChatCerebras
             os.environ["CEREBRAS_API_KEY"] = os.getenv("CEREBRAS_API_KEY")
             self.chat_model = ChatCerebras(
                 model=self.model_name,
@@ -141,7 +167,6 @@ class LanguageModel:
 
     def _ensure_model_pulled(self) -> None:
         """Ensures that an Ollama model is pulled before use."""
-        import subprocess
         try:
             subprocess.run(
                 ["ollama", "pull", self.model_name],
@@ -226,7 +251,6 @@ class LanguageModel:
             return response.content, response.tool_calls
 
         if json_formatting and issubclass(pydantic_object, BaseModel):
-            from langchain_core.output_parsers import JsonOutputParser
             parser = JsonOutputParser(pydantic_object=pydantic_object)
             format_instructions = parser.get_format_instructions()
             
@@ -242,9 +266,23 @@ class LanguageModel:
             except Exception as e:
                 raise ValueError(f"JSON parsing error: {e}")
 
-        from langchain.schema import StrOutputParser
         chain = self.chat_prompt_template | self.chat_model | StrOutputParser()
         
         if stream:
             return chain.stream({"text": prompt})
         return chain.invoke({"text": prompt})
+
+if __name__ == "__main__":
+    # Test simple avec config dict
+    config = {
+        'model_name': 'meta-llama/llama-4-maverick-17b-128e-instruct',
+        'llm_provider': 'groq',
+        'temperature': 0.7,
+        'max_tokens': 128,
+        'top_k': 20,
+        'top_p': 0.9,
+        'system_prompt': 'You are a test assistant.'
+    }
+    llm = LanguageModel(config=config)
+    print(llm.answer("Quel est le sens de la vie ?"))
+  

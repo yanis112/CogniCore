@@ -43,3 +43,7 @@ visualization_test
 
 # PyPI instructions (private)
 pypi_instructions.md
+
+# Test folder
+test_data/
+

@@ -1,0 +1,1 @@
+I will give you a user query and you will answer only the associated class index (as a single integer, no preamble, no explanation). Here is the user query: # {user_query} #, And here are the labels of each class along with a precise description of the class: {labels_dict} . Answer the most plausible class index (as an integer, nothing else). 

@@ -2,12 +2,16 @@ from PIL import Image
 from groq import Groq
 import google.generativeai as genai
 import os
-from typing import Optional
+from typing import Optional, Union, List
 import tempfile
 import time
 import torch
 from transformers import AutoProcessor, AutoModelForCausalLM
 from langchain.prompts import PromptTemplate
+import base64
+from dotenv import load_dotenv
+from openai import OpenAI
+import yaml
 
 class ImageAnalyzerAgent:
     """
@@ -35,26 +39,41 @@ class ImageAnalyzerAgent:
     def __init__(self, config=None):
         """
         Initializes the ImageAnalyzerAgent.
-        
         Args:
-            config (dict, optional): Configuration dictionary containing generation parameters.
-                                   Defaults to None.
+            config (dict, str, or None): Configuration dictionary or yaml path containing generation parameters.
         """
-        from dotenv import load_dotenv
-        
-        self.config = config
-
+        # Gestion de la config
+        if config is not None:
+            if isinstance(config, str):
+                with open(config, 'r', encoding='utf-8') as f:
+                    config_dict = yaml.safe_load(f)
+            elif isinstance(config, dict):
+                config_dict = config
+            else:
+                raise ValueError("config must be a dict, a yaml path (str), or None")
+            self.config = {
+                'temperature': config_dict.get('temperature', 1.0),
+                'max_tokens': config_dict.get('max_tokens', 8000),
+                'top_k': config_dict.get('top_k', 45),
+                'top_p': config_dict.get('top_p', 0.95),
+            }
+        else:
+            self.config = {
+                'temperature': 1.0,
+                'max_tokens': 8000,
+                'top_k': 45,
+                'top_p': 0.95,
+            }
         load_dotenv()
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         self.torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
-        self.token = os.getenv["GITHUB_TOKEN"]
+        self.token = os.getenv("GITHUB_TOKEN")
         self.endpoint = "https://models.inference.ai.azure.com"
         self.groq_token = os.getenv("GROQ_API_KEY")
         self.groq_client = Groq(api_key=self.groq_token) if self.groq_token else None
         self.gemini_token = os.getenv("GOOGLE_API_KEY")
         if self.gemini_token:
             genai.configure(api_key=self.gemini_token)
-        
         # Default refinement prompt template path
         self.default_refinement_prompt_path = "prompts/image_refinement_prompt.txt"
 
@@ -75,7 +94,6 @@ class ImageAnalyzerAgent:
 
     def get_image_data_url(self, image_file: str, image_format: str) -> str:
         """Convert an image file to a data URL string."""
-        import base64
         try:
             with open(image_file, "rb") as f:
                 image_data = base64.b64encode(f.read()).decode("utf-8")
@@ -113,8 +131,6 @@ class ImageAnalyzerAgent:
         Returns:
             str: The generated image description text.
         """
-        from openai import OpenAI
-        
         client = OpenAI(
             base_url=self.endpoint,
             api_key=self.token,
@@ -179,90 +195,97 @@ class ImageAnalyzerAgent:
         )
         return response.choices[0].message.content
 
-    def _describe_with_groq(self, image_path: str, prompt: str, model_name: str="llama-3.2-90b-vision-preview", 
+    def _describe_with_groq(self, image_path: Union[str, List[str]], prompt: str, model_name: str="meta-llama/llama-4-maverick-17b-128e-instruct", 
                            max_size: int = 768, refinement_steps: int = 1, 
                            refinement_prompt_path: Optional[str] = None) -> str:
         """
-        Describe an image using Groq's vision model with optional refinement steps.
-    
+        Describe one or several images using Groq's vision model with optional refinement steps.
         Args:
-            image_path (str): Path to the image file.
+            image_path (str | list[str]): Path or list of paths to image files.
             prompt (str): The prompt to guide the image description.
             model_name (str): The name of the Groq model to use.
             max_size (int): Maximum size of the image dimension before resizing.
             refinement_steps (int): Number of refinement iterations. Default is 1 (no refinement).
             refinement_prompt_path (str, optional): Path to the refinement prompt template.
-    
         Returns:
             str: The generated image description text.
         """
-        # Image processing
-        image = Image.open(image_path)
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-        image = self.resize_image(image, max_size)
-        
-        # Save and get data URL
-        image_format = image_path.split('.')[-1]
-        with tempfile.NamedTemporaryFile(suffix=f".{image_format}", delete=False) as temp_file:
-            image.save(temp_file.name)
-            image_data_url = self.get_image_data_url(temp_file.name, image_format)
-        
+        # Image(s) processing
+        if isinstance(image_path, str):
+            paths_to_load = [image_path]
+        elif isinstance(image_path, list):
+            paths_to_load = image_path
+        else:
+            raise TypeError(f"Groq image_path must be a string or a list of strings, got {type(image_path)}")
+        image_data_urls = []
+        for path_item in paths_to_load:
+            image = Image.open(path_item)
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            image = self.resize_image(image, max_size)
+            image_format = path_item.split('.')[-1]
+            with tempfile.NamedTemporaryFile(suffix=f".{image_format}", delete=False) as temp_file:
+                image.save(temp_file.name)
+                image_data_url = self.get_image_data_url(temp_file.name, image_format)
+            image_data_urls.append(image_data_url)
+        # Compose message content
+        content = [
+            {"type": "text", "text": prompt}
+        ] + [
+            {"type": "image_url", "image_url": {"url": url}} for url in image_data_urls
+        ]
         # Initial description
-        current_description = self._get_groq_description(image_data_url, prompt, model_name)
-        
+        completion = self.groq_client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "user", "content": content}
+            ],
+            temperature=self.config["temperature"],
+            max_completion_tokens=self.config["max_tokens"],
+            top_p=self.config["top_p"],
+            stream=False,
+            stop=None,
+        )
+        current_description = completion.choices[0].message.content
         # Refinement steps
         if refinement_steps > 1:
             template = self.load_refinement_prompt(refinement_prompt_path or self.default_refinement_prompt_path)
-            
             for _ in range(refinement_steps - 1):
                 refined_prompt = template.format(
                     original_query=prompt,
                     previous_answer=current_description
                 )
-                current_description = self._get_groq_description(image_data_url, refined_prompt, model_name)
-        
+                content = [
+                    {"type": "text", "text": refined_prompt}
+                ] + [
+                    {"type": "image_url", "image_url": {"url": url}} for url in image_data_urls
+                ]
+                completion = self.groq_client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {"role": "user", "content": content}
+                    ],
+                    temperature=self.config["temperature"],
+                    max_completion_tokens=self.config["max_tokens"],
+                    top_p=self.config["top_p"],
+                    stream=False,
+                    stop=None,
+                )
+                current_description = completion.choices[0].message.content
         return current_description
 
-    def _get_groq_description(self, image_data_url: str, prompt: str, model_name: str) -> str:
-        """Helper method to get description from Groq."""
-        completion = self.groq_client.chat.completions.create(
-            model=model_name,
-            messages=[
-                {
-                    "role": "user", 
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": prompt
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": image_data_url
-                            }
-                        }
-                    ]
-                }
-            ],
-            temperature=self.config["temperature"],
-            max_tokens=self.config["max_tokens"]
-        )
-        return completion.choices[0].message.content
-
-    def _describe_gemini(self, image_path: str, prompt: str, model_name: str="gemini-1.5-flash",
+    def _describe_gemini(self, image_path: Union[str, List[str]], prompt: str, model_name: str="gemini-1.5-flash",
                         refinement_steps: int = 1, refinement_prompt_path: Optional[str] = None) -> str:
         """
-        Describes an image using a specified Gemini model with optional refinement steps.
-    
+        Describes an image ou une liste d'images avec Gemini.
         Args:
-            image_path (str): Path to the image file.
-            prompt (str): The prompt to guide the image description.
-            model_name (str): The name of the Gemini model to use.
-            refinement_steps (int): Number of refinement iterations. Default is 1 (no refinement).
-            refinement_prompt_path (str, optional): Path to the refinement prompt template.
+            image_path (str | list[str]): Chemin ou liste de chemins d'images.
+            prompt (str): Prompt pour la description.
+            model_name (str): Nom du modèle Gemini.
+            refinement_steps (int): Nombre d'itérations de raffinement.
+            refinement_prompt_path (str, optional): Chemin du prompt de raffinement.
         Returns:
-            str: The generated image description text.
+            str: Description générée.
         """
         try:
             generation_config = {
@@ -272,28 +295,31 @@ class ImageAnalyzerAgent:
                 "max_output_tokens": self.config["max_tokens"],
                 "response_mime_type": "text/plain",
             }
-
-            # Load the image
-            image = Image.open(image_path)
-            if image.mode != 'RGB':
-                image = image.convert('RGB')
-            
+            pil_images = []
+            if isinstance(image_path, str):
+                paths_to_load = [image_path]
+            elif isinstance(image_path, list):
+                paths_to_load = image_path
+            else:
+                raise TypeError(f"Gemini image_path must be a string or a list of strings, got {type(image_path)}")
+            for path_item in paths_to_load:
+                image = Image.open(path_item)
+                if image.mode != 'RGB':
+                    image = image.convert('RGB')
+                pil_images.append(image)
             model = genai.GenerativeModel(model_name=model_name, generation_config=generation_config)
-            
-            # Initial description
-            current_description = model.generate_content([prompt, image]).text
-            
-            # Refinement steps
+            # Initial description: images d'abord, puis prompt
+            initial_content_parts = pil_images + [prompt]
+            current_description = model.generate_content(initial_content_parts).text
+            # Raffinement
             if refinement_steps > 1:
-                print("Refining the prompt for extra steps...")
                 template = self.load_refinement_prompt(refinement_prompt_path or self.default_refinement_prompt_path)
-                
                 for _ in range(refinement_steps - 1):
-                    refined_prompt = template.format(
+                    refined_prompt_text = template.format(
                         previous_description=current_description
                     )
-                    current_description = model.generate_content([refined_prompt, image]).text
-            
+                    refined_content_parts = pil_images + [refined_prompt_text]
+                    current_description = model.generate_content(refined_content_parts).text
             return current_description
         except Exception as e:
             return f"Error during Gemini description: {e}"
@@ -349,41 +375,40 @@ class ImageAnalyzerAgent:
         caption = self.processor.post_process_generation(caption, task="<CAPTION>", image_size=(image.width, image.height))
         return caption["<CAPTION>"]
     
-    def describe(self, image_path: str, prompt: Optional[str] = None, vllm_provider: str = "florence2", 
+    def describe(self, image_path: Union[str, List[str]], prompt: Optional[str] = None, vllm_provider: str = "florence2", 
                 vllm_name: Optional[str]=None, refinement_steps: int = 1, 
                 refinement_prompt_path: Optional[str] = None) -> str:
         """
-        Unified method to describe an image using a specified provider.
-
+        Unified method to describe an image or images using a specified provider.
         Args:
-            image_path (str): Path to the image file.
-            prompt (str, optional): The prompt to guide the image description.
-            vllm_provider (str, optional): The provider of the vision model.
-            vllm_name (str, optional): The name of the model to use.
-            refinement_steps (int): Number of refinement iterations. Default is 1 (no refinement).
-            refinement_prompt_path (str, optional): Path to the refinement prompt template.
-
+            image_path (str | list[str]): Chemin ou liste de chemins d'images (liste supportée pour Gemini et Groq).
+            prompt (str, optional): Prompt pour la description.
+            vllm_provider (str, optional): Provider du modèle.
+            vllm_name (str, optional): Nom du modèle.
+            refinement_steps (int): Nombre d'itérations de raffinement.
+            refinement_prompt_path (str, optional): Chemin du prompt de raffinement.
         Returns:
-            str: The generated image description text.
-
+            str: Description générée.
         Raises:
-            ValueError: If an unsupported `vllm_provider` is specified.
+            ValueError: Provider non supporté.
+            TypeError: Si image_path est une liste pour un provider qui ne le supporte pas.
         """
         if prompt is None:
             prompt = self.prompt
-
         if vllm_provider == "florence2":
+            if not isinstance(image_path, str):
+                raise TypeError(f"Provider '{vllm_provider}' currently supports only a single image path (str), but got type {type(image_path)}.")
             return self._describe_with_florence(image_path, prompt, refinement_steps, refinement_prompt_path)
         elif vllm_provider == "groq":
-            if not self.groq_client:
-                raise ValueError("Groq API key not found in environment variables")
             return self._describe_with_groq(
                 image_path, prompt, 
-                model_name=vllm_name if vllm_name else "llama-3.2-90b-vision-preview",
+                model_name=vllm_name if vllm_name else "meta-llama/llama-4-maverick-17b-128e-instruct",
                 refinement_steps=refinement_steps,
                 refinement_prompt_path=refinement_prompt_path
             )
         elif vllm_provider == "github":
+            if not isinstance(image_path, str):
+                raise TypeError(f"Provider '{vllm_provider}' currently supports only a single image path (str), but got type {type(image_path)}.")
             return self._describe_openai(
                 image_path, prompt, 
                 model_name=vllm_name if vllm_name else 'gpt-4o-mini',
@@ -399,43 +424,49 @@ class ImageAnalyzerAgent:
             )
         else:
             raise ValueError(
-                "Unsupported provider. Choose from 'florence2', 'groq', 'github' or 'gemini'."
+                "Unsupported provider. Choose from 'florence2', 'groq', 'github', or 'gemini'."
             )
 
 # Example usage
 if __name__ == "__main__":
-    analyzer = ImageAnalyzerAgent()
-    image_path = "aux_data/document_scores.png"
-    prompt = "Describe precisely the content of the image."
+    config_path = "exemple_config.yaml"
+    analyzer = ImageAnalyzerAgent(config=config_path)
+    image_path1 = "test_data/borsalino-rostro-min.webp"
+    image_path2 = "test_data/borsalino-rostro-min.webp"  # pour test multi-image, tu peux changer le chemin
+    prompt = "Describe precisely the content of the image(s)."
 
-    # Example using Groq
-    start_time = time.time()
+    # Test single image Groq
     description_groq = analyzer.describe(
-        image_path, prompt=prompt, vllm_provider="groq", vllm_name="llama-3.2-90b-vision-preview"
+        image_path1, prompt=prompt, vllm_provider="groq"
     )
-    end_time = time.time()
-    print(f"Groq Description:\n{description_groq}")
-    print("Groq process took:", end_time - start_time, "seconds.")
-    
+    print(f"Groq (single image) Description:\n{description_groq}")
     print("#############################################")
 
-    # Example using Gemini
-    start_time = time.time()
+    # Test multi-image Groq
+    description_groq_multi = analyzer.describe(
+        [image_path1, image_path2], prompt="Describe both images", vllm_provider="groq"
+    )
+    print(f"Groq (multi-image) Description:\n{description_groq_multi}")
+    print("#############################################")
+
+    # Test single image Gemini
     description_gemini = analyzer.describe(
-        image_path, prompt=prompt, vllm_provider="gemini", vllm_name="gemini-1.5-flash"
+        image_path1, prompt=prompt, vllm_provider="gemini"
     )
-    end_time = time.time()
-    print(f"\nGemini Description:\n{description_gemini}")
-    print("Gemini process took:", end_time - start_time, "seconds.")
-    
+    print(f"\nGemini (single image) Description:\n{description_gemini}")
     print("#############################################")
 
-    # Example using github
-    start_time = time.time()
-    description_github = analyzer.describe(
-        image_path, prompt=prompt, vllm_provider="github", vllm_name="gpt-4o-mini"
+    # Test multi-image Gemini
+    description_gemini_multi = analyzer.describe(
+        [image_path1, image_path2], prompt="Describe both images", vllm_provider="gemini"
     )
-    end_time = time.time()
-    print(f"\nGithub Description:\n{description_github}")
-    print("Github process took:", end_time - start_time, "seconds.")
+    print(f"\nGemini (multi-image) Description:\n{description_gemini_multi}")
+    print("#############################################")
+
+    # Test single image github
+    description_github = analyzer.describe(
+        image_path1, prompt=prompt, vllm_provider="github"
+    )
+    print(f"\nGithub (GPT-4o-mini) Description:\n{description_github}")
+    print("#############################################")
 
