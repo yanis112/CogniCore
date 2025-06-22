@@ -1,6 +1,6 @@
-# Free LLM Toolbox 🚀
+# CogniCore 🚀
 
-A Python package that provides easy-to-use utilities for working with various Language Models (LLMs) and Vision Models. 🎯 But everything is free ! (working on generous free plans of some AI platforms)
+A Python package that provides a unified, easy-to-use interface for working with various Language Models (LLMs) and Vision Models from multiple providers. 🎯 It focuses on leveraging the generous free tiers offered by AI platforms.
 
 ## Features
 
@@ -15,7 +15,7 @@ A Python package that provides easy-to-use utilities for working with various La
 ## Installation 💻
 
 ```bash
-uv pip install free-llm-toolbox
+uv pip install cognicore
 ```
 
 ## Configuration ⚙️
@@ -35,7 +35,7 @@ CEREBRAS_API_KEY=your_cerebras_key
 ### Text Generation
 
 ```python
-from free_llm_toolbox import LanguageModel
+from cognicore import LanguageModel
 
 # Initialize a session with your preferred model
 session = LanguageModel(
@@ -52,7 +52,7 @@ print(response)
 ### Image Analysis
 
 ```python
-from free_llm_toolbox import ImageAnalyzerAgent
+from cognicore import ImageAnalyzerAgent
 
 analyzer = ImageAnalyzerAgent()
 description = analyzer.describe(
@@ -69,7 +69,7 @@ print(description)
 ### Text Models 📚
 
 ```python
-from free_llm_toolbox import LanguageModel
+from cognicore import LanguageModel
 
 # Initialize a session with your preferred model
 session = LanguageModel(
@@ -121,7 +121,7 @@ for chunk in session.answer(
 ### Vision Models 👁️
 
 ```python
-from free_llm_toolbox import ImageAnalyzerAgent
+from cognicore import ImageAnalyzerAgent
 
 # Initialize the agent
 analyzer = ImageAnalyzerAgent()
@@ -172,7 +172,7 @@ print(description)
 ### Usage Example with Provider ID and Model ID
 
 ```python
-from free_llm_toolbox import LanguageModel
+from cognicore import LanguageModel
 
 # Initialize a session with specific provider and model IDs
 session = LanguageModel(
@@ -219,7 +219,7 @@ You can initialize both `LanguageModel` and `ImageAnalyzerAgent` in three ways:
 
 1. **Manual arguments** (classic Python style):
    ```python
-   from free_llm_toolbox import LanguageModel
+   from cognicore import LanguageModel
    llm = LanguageModel(
        model_name="llama-3.3-70b-versatile",
        provider="groq",
@@ -283,7 +283,7 @@ result = analyzer.describe([
 ### Exemple d'utilisation
 
 ```python
-from free_llm_toolbox.text_classifier_utils import TextClassifier
+from cognicore.text_classifier_utils import TextClassifier
 
 # Utilisation avec un fichier de config YAML
 classifier = TextClassifier(config="exemple_config.yaml")
@@ -321,7 +321,7 @@ query_classification_provider: "groq"
 ### Exemple d'utilisation
 
 ```python
-from free_llm_toolbox.image_classifier_utils import ImageClassifier
+from cognicore.image_classifier_utils import ImageClassifier
 
 # Utilisation avec un fichier de config YAML
 classifier = ImageClassifier(config="exemple_config.yaml")
@@ -358,7 +358,7 @@ image_classification_provider: "gemini"
 ### Usage Example
 
 ```python
-from free_llm_toolbox import InternetSearcher
+from cognicore import InternetSearcher
 
 # Initialize with default settings (Groq's compound-beta)
 searcher = InternetSearcher()

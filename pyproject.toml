@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "free_llm_toolbox"
+name = "cognicore"
 version = "0.1.9"  # Incrémentation de la version
 description = "A Python toolbox for easy interaction with various LLMs and Vision models"
 readme = "README.md"
@@ -47,12 +47,12 @@ requires-python = ">=3.10"
 dev = ["pytest>=7.0", "pytest-cov>=4.0", "black>=23.0", "isort>=5.0"]
 
 [project.urls]
-Homepage = "https://github.com/username/free_llm_toolbox"
-Repository = "https://github.com/username/free_llm_toolbox"
+Homepage = "https://github.com/username/cognicore"
+Repository = "https://github.com/username/cognicore"
 
 # Mise à jour pour utiliser la nouvelle structure
 [tool.hatch.build]
-packages = ["free_llm_toolbox"]
+packages = ["cognicore"]
 
 [tool.uv]
 dev-dependencies = [

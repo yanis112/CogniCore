@@ -78,7 +78,7 @@ query_classification_provider: "groq"
 # =============================
 # Parameters for text_classifier_utils.py (TextClassifier)
 # =============================
-# These parameters are used only by the TextClassifier class in free_llm_toolbox/text_classifier_utils.py
+# These parameters are used only by the TextClassifier class in cognicore/text_classifier_utils.py
 classification_labels_dict: {
   0: {"class_name": "question", "description": "A general question about any topic."},
   1: {"class_name": "job_search", "description": "A request related to job searching or job offers."},
@@ -97,7 +97,7 @@ captioned_videos_output_dir: "output/captioned_videos"
 # =============================
 # Parameters for image_classifier_utils.py (ImageClassifier)
 # =============================
-# These parameters are used only by the ImageClassifier class in free_llm_toolbox/image_classifier_utils.py
+# These parameters are used only by the ImageClassifier class in cognicore/image_classifier_utils.py
 image_classification_labels_dict: {
   0: {"class_name": "animal", "description": "Image contenant un animal."},
   1: {"class_name": "ville", "description": "Image représentant une ville ou un lieu urbain."},
