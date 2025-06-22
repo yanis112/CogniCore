@@ -1,4 +1,4 @@
-from vision_utils import ImageAnalyzerAgent
+from .vision_utils import ImageAnalyzerAgent
 from langchain_core.prompts import PromptTemplate
 import os
 from typing import Dict, Any, Optional, Union
@@ -80,4 +80,4 @@ if __name__ == "__main__":
     test_image = "test_data/borsalino-rostro-min.webp"
     print("Image :", test_image)
     print("Index de classe prédit :", classifier.classify(test_image))
-    print("Nom de classe prédit :", classifier.classify(test_image, return_class_name=True)) 
+    print("Nom de classe prédit :", classifier.classify(test_image, return_class_name=True))

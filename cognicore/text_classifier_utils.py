@@ -1,4 +1,4 @@
-from language_model import LanguageModel
+from .language_model import LanguageModel
 from langchain_core.prompts import PromptTemplate
 import os
 from typing import Dict, Any, Optional, Union
@@ -88,4 +88,4 @@ if __name__ == "__main__":
     test_text = "Le chat est un animal domestique."
     print("Texte :", test_text)
     print("Index de classe prédit :", classifier.classify(test_text))
-    print("Nom de classe prédit :", classifier.classify(test_text, return_class_name=True)) 
+    print("Nom de classe prédit :", classifier.classify(test_text, return_class_name=True))

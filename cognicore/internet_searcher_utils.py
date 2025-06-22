@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 from typing import Optional, Union, Generator
 import yaml
 
+from .language_model import LanguageModel
+
 load_dotenv()
 
 class InternetSearcher:

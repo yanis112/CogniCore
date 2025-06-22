@@ -5,7 +5,9 @@ config_path: "config/config.yaml"
 llm_provider: "google" #"github" #"github" #"groq" #"sambanova" #"sambanova" #"groq" # Provider of the LLM model ('cerebras or ollama or groq') don't forget to change the provider if you change the llm. Pay attention the model name can vary depending on the provider !
 model_name: "gemini-2.5-flash-preview-04-17" #"meta-Llama-3.1-405B-Instruct" #"llama3-405b" #gpt-4o" #llama-3.1-70b-versatile" #"llama-3.2-90b-text-preview" #"llama3-405b" # "llama-3.2-90b-text-preview" #"llama3-405b" #LLM used for inference the name can be in the following list, pay attention that the llm name should correspond to the llm provider: "hermes3" (ollama);"llama-3.1-8b-instant (groq)"
 models_dict: {
+            "gemini-2.5-flash-preview-05-20": "google",
             "gemini-2.5-flash-preview-04-17": "google",
+            "gemini-2.5-pro-exp-03-25": "google",
             "gemini-2.5-pro-preview-05-06": "google",
               "o3-mini":"github",
               "deepseek-r1-distill-llama-70b":"groq",
@@ -16,17 +18,21 @@ models_dict: {
               "o1-mini": "github",
               "o1-preview": "github",
               "llama3-405b": "sambanova",
+              "DeepSeek-R1-0528": "sambanova",
               "llama-3.1-8b-instant": "groq",
               "llama-3.2-3b-preview": "groq",
               "DeepSeek-R1":"github",
               "llama-4-maverick-17b-128e-instruct": "groq",
-             
+              "openai/gpt-4.1": "github",
+              "gemma-3n-e4b-it": "google",
+              "qwen/qwen3-32b": "groq"
             }
 
 #vllm parameters
 vllm_model_name: "gemini-2.5-flash-preview-04-17" #VLLM model to use for la génération
 vllm_provider: "gemini" # Provider of the VLLM model
 vision_model_dict: { 
+    "gemini-2.5-flash-preview-05-20": "gemini",
     "gemini-2.5-flash-preview-04-17": "gemini",
     "gemini-2.5-pro-preview-05-06": "gemini",
     "gemini-2.5-pro-exp-03-25": "gemini",
@@ -35,7 +41,8 @@ vision_model_dict: {
     "phi-4-multimodal-instruct": "github",
     "meta-llama/llama-4-maverick-17b-128e-instruct": "groq",
     "meta-llama/llama-4-scout-17b-16e-instruct": "groq",
-    
+    "openai/gpt-4.1": "github",
+    "gemini-3n-e4b-it": "gemini"
 }
 
 #LLM parameters
