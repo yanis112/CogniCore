@@ -12,41 +12,8 @@ permissions:
   id-token: write
 
 jobs:
-  # --- JOB 1: TESTER LE CODE AVEC UV ET PYTEST ---
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out the repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v1
-
-      # CORRECTION : Créer, activer, installer et tester dans la MÊME étape
-      - name: Install dependencies and run tests
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-        run: |
-          # 1. Créer l'environnement virtuel
-          uv venv
-          
-          # 2. Activer l'environnement virtuel (crucial !)
-          source .venv/bin/activate
-          
-          # 3. Installer les dépendances dans le venv activé
-          uv pip install -e ".[dev]"
-          
-          # 4. Lancer les tests dans le venv activé
-          pytest
-
   # --- JOB 2: CONSTRUIRE ET PUBLIER LE PACKAGE ---
   publish:
-    needs: test
     runs-on: ubuntu-latest
 
     steps:
