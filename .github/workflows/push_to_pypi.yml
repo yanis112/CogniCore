@@ -1,0 +1,69 @@
+# Nom du workflow
+name: Publish Python Package to PyPI with UV
+
+# Déclencheur : push sur un tag commençant par 'v'
+on:
+  push:
+    tags:
+      - 'v*'
+
+# Définition des permissions pour le token GITHUB_TOKEN
+# Nécessaire pour publier en utilisant les "trusted publishers" de PyPI (méthode la plus moderne)
+permissions:
+  id-token: write # Cette permission est nécessaire pour l'authentification OIDC sur PyPI
+
+jobs:
+  # --- JOB 1: TESTER LE CODE AVEC UV ET PYTEST ---
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Installe uv en utilisant l'action officielle
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v1
+
+      # Installe les dépendances du projet, y compris celles de [dev]
+      - name: Install dependencies with uv
+        run: uv pip install -e ".[dev]"
+
+      # Lance les tests
+      - name: Run tests with pytest
+        run: pytest
+
+  # --- JOB 2: CONSTRUIRE ET PUBLIER LE PACKAGE ---
+  publish:
+    # Ce job ne démarre que si le job 'test' a réussi
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Installe uv ici aussi
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v1
+
+      # Installe les outils de build avec uv
+      - name: Install build tools with uv
+        run: uv pip install build twine
+
+      # Construit le package (cette commande reste la même)
+      - name: Build package
+        run: python -m build
+
+      # Publie le package sur PyPI
+      - name: Publish package to PyPI
+        run: twine upload dist/* --username __token__ --password ${{ secrets.PYPI_API_TOKEN }}
