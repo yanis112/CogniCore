@@ -7,10 +7,9 @@ on:
     tags:
       - 'v*'
 
-# Définition des permissions pour le token GITHUB_TOKEN
-# Nécessaire pour publier en utilisant les "trusted publishers" de PyPI (méthode la plus moderne)
+# Définition des permissions
 permissions:
-  id-token: write # Cette permission est nécessaire pour l'authentification OIDC sur PyPI
+  id-token: write
 
 jobs:
   # --- JOB 1: TESTER LE CODE AVEC UV ET PYTEST ---
@@ -25,21 +24,22 @@ jobs:
         with:
           python-version: '3.11'
 
-      # Installe uv en utilisant l'action officielle
       - name: Set up uv
         uses: astral-sh/setup-uv@v1
 
-      # Installe les dépendances du projet, y compris celles de [dev]
+      # CORRECTION : Créer l'environnement virtuel avant d'installer quoi que ce soit
+      - name: Create a virtual environment
+        run: uv venv
+
+      # Cette commande va maintenant fonctionner car uv détectera le .venv créé
       - name: Install dependencies with uv
         run: uv pip install -e ".[dev]"
 
-      # Lance les tests
       - name: Run tests with pytest
         run: pytest
 
   # --- JOB 2: CONSTRUIRE ET PUBLIER LE PACKAGE ---
   publish:
-    # Ce job ne démarre que si le job 'test' a réussi
     needs: test
     runs-on: ubuntu-latest
 
@@ -52,18 +52,18 @@ jobs:
         with:
           python-version: '3.11'
 
-      # Installe uv ici aussi
       - name: Set up uv
         uses: astral-sh/setup-uv@v1
+        
+      # CORRECTION : Créer aussi un environnement virtuel dans ce job
+      - name: Create a virtual environment
+        run: uv venv
 
-      # Installe les outils de build avec uv
       - name: Install build tools with uv
         run: uv pip install build twine
 
-      # Construit le package (cette commande reste la même)
       - name: Build package
         run: python -m build
 
-      # Publie le package sur PyPI
       - name: Publish package to PyPI
         run: twine upload dist/* --username __token__ --password ${{ secrets.PYPI_API_TOKEN }}
