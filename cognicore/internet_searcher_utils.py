@@ -15,16 +15,16 @@ class InternetSearcher:
 
     def __init__(
         self,
-        model_name: str = "compound-beta",
-        provider: str = "groq",
+        internet_search_model: str = "compound-beta",
+        internet_search_provider: str = "groq",
         config: Optional[Union[dict, str]] = None,
     ):
         """
         Initializes the InternetSearcher.
 
         Args:
-            model_name (str): The name of the model to use for searching. Defaults to "compound-beta".
-            provider (str): The provider of the model. Currently only "groq" is supported.
+            internet_search_model (str): The name of the model to use for searching. Defaults to "compound-beta".
+            internet_search_provider (str): The provider of the model. Currently only "groq" is supported.
             config (dict, str, or None): Configuration dictionary or yaml path.
         """
         config_dict = {}
@@ -35,18 +35,18 @@ class InternetSearcher:
             elif isinstance(config, dict):
                 config_dict = config
             else:
-                raise ValueError("config must be a dict, a yaml path (str), or None")
+                raise ValueError("Config must be a dict or a yaml path string.")
 
         # Explicit parameters override config
-        self.model_name = config_dict.get("internet_search_model", model_name)
-        self.provider = config_dict.get("internet_search_provider", provider)
+        self.internet_search_model = config_dict.get("internet_search_model", internet_search_model)
+        self.internet_search_provider = config_dict.get("internet_search_provider", internet_search_provider)
         
-        if self.provider.lower() != "groq":
+        if self.internet_search_provider.lower() != "groq":
             raise ValueError("Currently, only 'groq' provider is supported for InternetSearcher.")
 
         self.groq_token = os.getenv("GROQ_API_KEY")
         if not self.groq_token:
-            raise ValueError("GROQ_API_KEY not found in environment variables.")
+            raise ValueError("GROQ_API_KEY not found in .env file.")
         
         self.client = Groq(api_key=self.groq_token)
 
@@ -85,7 +85,7 @@ class InternetSearcher:
         params.update(kwargs)
 
         completion = self.client.chat.completions.create(
-            model=self.model_name,
+            model=self.internet_search_model,
             messages=[{"role": "user", "content": prompt}],
             temperature=params['temperature'],
             max_completion_tokens=params['max_tokens'],

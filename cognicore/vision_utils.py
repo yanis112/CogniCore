@@ -36,13 +36,16 @@ class ImageAnalyzerAgent:
 
     prompt = "<MORE_DETAILED_CAPTION>"
 
-    def __init__(self, config=None):
+    def __init__(self, vision_model: str = None, vision_provider: str = None, config=None):
         """
         Initializes the ImageAnalyzerAgent.
         Args:
+            vision_model (str, optional): The name of the vision model to use.
+            vision_provider (str, optional): The provider of the vision model.
             config (dict, str, or None): Configuration dictionary or yaml path containing generation parameters.
         """
         # Gestion de la config
+        config_dict = {}
         if config is not None:
             if isinstance(config, str):
                 with open(config, 'r', encoding='utf-8') as f:
@@ -51,19 +54,17 @@ class ImageAnalyzerAgent:
                 config_dict = config
             else:
                 raise ValueError("config must be a dict, a yaml path (str), or None")
-            self.config = {
-                'temperature': config_dict.get('temperature', 1.0),
-                'max_tokens': config_dict.get('max_tokens', 8000),
-                'top_k': config_dict.get('top_k', 45),
-                'top_p': config_dict.get('top_p', 0.95),
-            }
-        else:
-            self.config = {
-                'temperature': 1.0,
-                'max_tokens': 8000,
-                'top_k': 45,
-                'top_p': 0.95,
-            }
+        
+        self.vision_model = vision_model or config_dict.get('vision_model')
+        self.vision_provider = vision_provider or config_dict.get('vision_provider')
+
+        self.config = {
+            'temperature': config_dict.get('temperature', 1.0),
+            'max_tokens': config_dict.get('max_tokens', 8000),
+            'top_k': config_dict.get('top_k', 45),
+            'top_p': config_dict.get('top_p', 0.95),
+        }
+
         load_dotenv()
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         self.torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
@@ -375,16 +376,16 @@ class ImageAnalyzerAgent:
         caption = self.processor.post_process_generation(caption, task="<CAPTION>", image_size=(image.width, image.height))
         return caption["<CAPTION>"]
     
-    def describe(self, image_path: Union[str, List[str]], prompt: Optional[str] = None, vllm_provider: str = "florence2", 
-                vllm_name: Optional[str]=None, refinement_steps: int = 1, 
+    def describe(self, image_path: Union[str, List[str]], prompt: Optional[str] = None, vision_provider: str = "florence2", 
+                vision_model: Optional[str]=None, refinement_steps: int = 1, 
                 refinement_prompt_path: Optional[str] = None) -> str:
         """
         Unified method to describe an image or images using a specified provider.
         Args:
             image_path (str | list[str]): Chemin ou liste de chemins d'images (liste supportée pour Gemini et Groq).
             prompt (str, optional): Prompt pour la description.
-            vllm_provider (str, optional): Provider du modèle.
-            vllm_name (str, optional): Nom du modèle.
+            vision_provider (str, optional): Provider du modèle.
+            vision_model (str, optional): Nom du modèle.
             refinement_steps (int): Nombre d'itérations de raffinement.
             refinement_prompt_path (str, optional): Chemin du prompt de raffinement.
         Returns:
@@ -395,30 +396,35 @@ class ImageAnalyzerAgent:
         """
         if prompt is None:
             prompt = self.prompt
-        if vllm_provider == "florence2":
+        
+        # Use the class's default model and provider if not specified in the call
+        vision_provider = vision_provider or self.vision_provider
+        vision_model = vision_model or self.vision_model
+
+        if vision_provider == "florence2":
             if not isinstance(image_path, str):
-                raise TypeError(f"Provider '{vllm_provider}' currently supports only a single image path (str), but got type {type(image_path)}.")
+                raise TypeError(f"Provider '{vision_provider}' currently supports only a single image path (str), but got type {type(image_path)}.")
             return self._describe_with_florence(image_path, prompt, refinement_steps, refinement_prompt_path)
-        elif vllm_provider == "groq":
+        elif vision_provider == "groq":
             return self._describe_with_groq(
                 image_path, prompt, 
-                model_name=vllm_name if vllm_name else "meta-llama/llama-4-maverick-17b-128e-instruct",
+                model_name=vision_model if vision_model else "meta-llama/llama-4-maverick-17b-128e-instruct",
                 refinement_steps=refinement_steps,
                 refinement_prompt_path=refinement_prompt_path
             )
-        elif vllm_provider == "github":
+        elif vision_provider == "github":
             if not isinstance(image_path, str):
-                raise TypeError(f"Provider '{vllm_provider}' currently supports only a single image path (str), but got type {type(image_path)}.")
+                raise TypeError(f"Provider '{vision_provider}' currently supports only a single image path (str), but got type {type(image_path)}.")
             return self._describe_openai(
                 image_path, prompt, 
-                model_name=vllm_name if vllm_name else 'gpt-4o-mini',
+                model_name=vision_model if vision_model else 'gpt-4o-mini',
                 refinement_steps=refinement_steps,
                 refinement_prompt_path=refinement_prompt_path
             )
-        elif vllm_provider == "gemini":
+        elif vision_provider == "gemini":
             return self._describe_gemini(
                 image_path, prompt, 
-                model_name=vllm_name if vllm_name else "gemini-1.5-flash",
+                model_name=vision_model if vision_model else "gemini-1.5-flash",
                 refinement_steps=refinement_steps,
                 refinement_prompt_path=refinement_prompt_path
             )
@@ -437,35 +443,35 @@ if __name__ == "__main__":
 
     # Test single image Groq
     description_groq = analyzer.describe(
-        image_path1, prompt=prompt, vllm_provider="groq"
+        image_path1, prompt=prompt, vision_provider="groq"
     )
     print(f"Groq (single image) Description:\n{description_groq}")
     print("#############################################")
 
     # Test multi-image Groq
     description_groq_multi = analyzer.describe(
-        [image_path1, image_path2], prompt="Describe both images", vllm_provider="groq"
+        [image_path1, image_path2], prompt="Describe both images", vision_provider="groq"
     )
     print(f"Groq (multi-image) Description:\n{description_groq_multi}")
     print("#############################################")
 
     # Test single image Gemini
     description_gemini = analyzer.describe(
-        image_path1, prompt=prompt, vllm_provider="gemini"
+        image_path1, prompt=prompt, vision_provider="gemini"
     )
     print(f"\nGemini (single image) Description:\n{description_gemini}")
     print("#############################################")
 
     # Test multi-image Gemini
     description_gemini_multi = analyzer.describe(
-        [image_path1, image_path2], prompt="Describe both images", vllm_provider="gemini"
+        [image_path1, image_path2], prompt="Describe both images", vision_provider="gemini"
     )
     print(f"\nGemini (multi-image) Description:\n{description_gemini_multi}")
     print("#############################################")
 
     # Test single image github
     description_github = analyzer.describe(
-        image_path1, prompt=prompt, vllm_provider="github"
+        image_path1, prompt=prompt, vision_provider="github"
     )
     print(f"\nGithub (GPT-4o-mini) Description:\n{description_github}")
     print("#############################################")

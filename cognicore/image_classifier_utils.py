@@ -8,9 +8,9 @@ class ImageClassifier(ImageAnalyzerAgent):
     def __init__(
         self,
         labels_dict: Optional[Dict[int, Dict[str, str]]] = None,
-        classifier_system_prompt: Optional[str] = None,
-        image_classification_model: Optional[str] = None,
-        image_classification_provider: Optional[str] = None,
+        image_classifier_system_prompt: Optional[str] = None,
+        image_classifier_model: Optional[str] = None,
+        image_classifier_provider: Optional[str] = None,
         config: Optional[Union[dict, str]] = None,
     ):
         config_dict = {}
@@ -24,18 +24,18 @@ class ImageClassifier(ImageAnalyzerAgent):
                 raise ValueError("config must be a dict, a yaml path (str), or None")
         # Les paramètres explicites sont prioritaires sur la config
         labels_dict = labels_dict if labels_dict is not None else config_dict.get("image_classification_labels_dict")
-        classifier_system_prompt = classifier_system_prompt if classifier_system_prompt is not None else config_dict.get("image_classifier_system_prompt")
-        image_classification_model = image_classification_model if image_classification_model is not None else config_dict.get("image_classification_model")
-        image_classification_provider = image_classification_provider if image_classification_provider is not None else config_dict.get("image_classification_provider")
+        image_classifier_system_prompt = image_classifier_system_prompt if image_classifier_system_prompt is not None else config_dict.get("image_classifier_system_prompt")
+        image_classifier_model = image_classifier_model if image_classifier_model is not None else config_dict.get("image_classifier_model")
+        image_classifier_provider = image_classifier_provider if image_classifier_provider is not None else config_dict.get("image_classifier_provider")
         if labels_dict is None:
             raise ValueError("labels_dict must be provided, either directly or via config")
         self.labels_dict = labels_dict
         self.class_names = [v["class_name"] for k, v in sorted(labels_dict.items())]
         self.class_indices = list(sorted(labels_dict.keys()))
         self.class_descriptions = [v["description"] for k, v in sorted(labels_dict.items())]
-        self.classifier_system_prompt = classifier_system_prompt or "You are an agent in charge of classifying images into different categories."
-        self.image_classification_model = image_classification_model
-        self.image_classification_provider = image_classification_provider
+        self.image_classifier_system_prompt = image_classifier_system_prompt or "You are an agent in charge of classifying images into different categories."
+        self.image_classifier_model = image_classifier_model
+        self.image_classifier_provider = image_classifier_provider
         # Appel du super constructeur avec le bon modèle/config
         super().__init__(config=config)
         # Chargement des prompts
@@ -59,7 +59,7 @@ class ImageClassifier(ImageAnalyzerAgent):
             prompt = self.prompt_template_index.format(labels_dict=labels_dict_str)
         # Utilise la méthode describe héritée pour obtenir une description de l'image
         # puis on pose la question de classification à l'IA
-        image_description = self.describe(image_path, prompt=prompt, vllm_provider=self.image_classification_provider, vllm_name=self.image_classification_model)
+        image_description = self.describe(image_path, prompt=prompt, vision_provider=self.image_classifier_provider, vision_model=self.image_classifier_model)
         response_str = str(image_description).strip()
         if return_class_name:
             return response_str

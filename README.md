@@ -62,8 +62,8 @@ from cognicore import LanguageModel
 
 # Initialize a session with your preferred model
 session = LanguageModel(
-    model_name="gemini-2.0-flash",
-    provider="google",
+    llm_model="gemini-2.0-flash",
+    llm_provider="google",
     temperature=0.7
 )
 
@@ -80,9 +80,8 @@ from cognicore import ImageAnalyzerAgent
 analyzer = ImageAnalyzerAgent()
 description = analyzer.describe(
     "path/to/image.jpg",
-    prompt="Describe the image",
-    vllm_provider="groq",
-    vllm_name="llama-3.2-90b-vision-preview"
+    vision_model="llama-3.2-90b-vision-preview",
+    vision_provider="groq"
 )
 print(description)
 ```
@@ -96,8 +95,8 @@ from cognicore import LanguageModel
 
 # Initialize a session with your preferred model
 session = LanguageModel(
-    model_name="llama-3-70b",
-    provider="groq",
+    llm_model="llama-3-70b",
+    llm_provider="groq",
     temperature=0.7,
     top_k=45,
     top_p=0.95
@@ -152,8 +151,8 @@ analyzer = ImageAnalyzerAgent()
 # Analyze an image
 description = analyzer.describe(
     image_path="path/to/image.jpg",
-    prompt="Describe this image in detail",
-    vllm_provider="groq"
+    vision_model="llama-3.2-90b-vision-preview",
+    vision_provider="groq"
 )
 print(description)
 ```
@@ -213,8 +212,8 @@ from cognicore import LanguageModel
 
 # Initialize a session with specific provider and model IDs
 session = LanguageModel(
-    model_name="llama-3.3-70b-versatile",  # Model ID from the table above
-    provider="groq",                        # Provider ID from the table above
+    llm_model="llama-3.3-70b-versatile",  # Model ID from the table above
+    llm_provider="groq",                  # Provider ID from the table above
     temperature=0.7
 )
 ```
@@ -258,18 +257,16 @@ You can initialize both `LanguageModel` and `ImageAnalyzerAgent` in three ways:
    ```python
    from cognicore import LanguageModel
    llm = LanguageModel(
-       model_name="llama-3.3-70b-versatile",
-       provider="groq",
-       temperature=0.7,
+       llm_model="llama-3.3-70b-versatile",
+       llm_provider="groq",
        max_tokens=1024,
    )
    ```
 2. **With a configuration dictionary** (useful for programmatic config or dynamic settings):
    ```python
    config = {
-       'model_name': 'llama-3.3-70b-versatile',
+       'llm_model': 'llama-3.3-70b-versatile',
        'llm_provider': 'groq',
-       'temperature': 0.7,
        'max_tokens': 1024,
    }
    llm = LanguageModel(config=config)
@@ -277,7 +274,6 @@ You can initialize both `LanguageModel` and `ImageAnalyzerAgent` in three ways:
 3. **With a YAML config file path** (for reproducibility, sharing, and easy experiment management):
    ```python
    llm = LanguageModel(config="exemple_config.yaml")
-   # The YAML file should contain keys like model_name, llm_provider, temperature, etc.
    ```
 
 The same logic applies to `ImageAnalyzerAgent`:
@@ -297,13 +293,13 @@ For some providers (notably **Gemini** and **Groq**), you can pass either a sing
 
 ```python
 # Single image
-result = analyzer.describe("path/to/image1.jpg", prompt="Describe this image", vllm_provider="gemini")
+result = analyzer.describe("path/to/image1.jpg", prompt="Describe this image", vision_model="gemini-2.5-flash-preview-05-20", vision_provider="gemini")
 
 # Multiple images (Gemini or Groq only)
 result = analyzer.describe([
     "path/to/image1.jpg",
     "path/to/image2.jpg"
-], prompt="Describe both images", vllm_provider="groq")
+], prompt="Describe both images", vision_model="llama-3.2-90b-vision-preview", vision_provider="groq")
 ```
 
 > **Note:** Passing multiple images is only supported for providers that support it (currently Gemini and Groq). For other providers, only a single image path (str) is accepted.
@@ -335,15 +331,11 @@ print("Class name:", classifier.classify(text, return_class_name=True))
 # Parameters for text_classifier_utils.py
 classification_labels_dict: {
   0: {"class_name": "question", "description": "A general question about any topic."},
-  1: {"class_name": "job_search", "description": "A request related to job searching or job offers."},
   2: {"class_name": "internet_search", "description": "A request to search for information on the internet."}
 }
 classifier_system_prompt: "You are an agent in charge of classifying user's queries into different categories of tasks."
-query_classification_model: "meta-llama/llama-4-scout-17b-16e-instruct"
-query_classification_provider: "groq"
 ```
 
-- Parameters passed explicitly to the class take precedence over those in the config.
 - Prompts should be placed in the `prompts` folder.
 
 ## Image Classification Utility: `ImageClassifier`

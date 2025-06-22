@@ -1,5 +1,4 @@
 import os
-from functools import lru_cache
 from typing import List, Union, Callable, Dict, Any, Optional, Generator, Type
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -51,8 +50,8 @@ class LanguageModel:
     
     def __init__(
         self,
-        model_name: str = None,
-        provider: str = None,
+        llm_model: str = None,
+        llm_provider: str = None,
         temperature: float = 1.0,
         max_tokens: int = 20000,
         top_k: int = 45,
@@ -70,17 +69,17 @@ class LanguageModel:
             else:
                 raise ValueError("config must be a dict, a yaml path (str), or None")
             # On surcharge les arguments
-            model_name = config_dict.get('model_name', model_name)
-            provider = config_dict.get('llm_provider', provider)
+            llm_model = config_dict.get('llm_model', llm_model)
+            llm_provider = config_dict.get('llm_provider', llm_provider)
             temperature = config_dict.get('temperature', temperature)
             max_tokens = config_dict.get('max_tokens', max_tokens)
             top_k = config_dict.get('top_k', top_k)
             top_p = config_dict.get('top_p', top_p)
             system_prompt = config_dict.get('system_prompt', system_prompt)
-        if model_name is None or provider is None:
-            raise ValueError("model_name and provider must be specified, either directly or via config")
-        self.model_name = model_name
-        self.provider = provider
+        if llm_model is None or llm_provider is None:
+            raise ValueError("llm_model and llm_provider must be specified, either directly or via config")
+        self.llm_model = llm_model
+        self.llm_provider = llm_provider
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.top_k = top_k
@@ -92,40 +91,40 @@ class LanguageModel:
     def _initialize_model(self) -> None:
         """Initializes the language model based on the specified provider."""
         
-        if self.provider == "groq":
+        if self.llm_provider == "groq":
             self.context_window_size = 131072
             self.chat_model = ChatGroq(
                 temperature=self.temperature,
-                model_name=self.model_name,
+                model_name=self.llm_model,
                 groq_api_key=os.getenv("GROQ_API_KEY"),
                 max_tokens=self.max_tokens,
             )
 
-        elif self.provider == "sambanova":
+        elif self.llm_provider == "sambanova":
             os.environ["SAMBANOVA_API_KEY"] = os.getenv("SAMBANOVA_API_KEY")
             self.context_window_size = 8000
             self.chat_model = ChatSambaNovaCloud(
-                model=self.model_name,
+                model=self.llm_model,
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
                 top_k=self.top_k,
                 top_p=self.top_p,
             )
 
-        elif self.provider == "github":
+        elif self.llm_provider == "github":
             from src.aux_utils.github_llm import GithubLLM
             self.chat_model = GithubLLM(
                 github_token=os.getenv("GITHUB_TOKEN"),
-                model_name=self.model_name,
+                model_name=self.llm_model,
                 temperature=self.temperature,
                 top_p=self.top_p,
                 top_k=self.top_k,
                 max_tokens=self.max_tokens,
             )
 
-        elif self.provider == "google":
+        elif self.llm_provider == "google":
             self.chat_model = ChatGoogleGenerativeAI(
-                model=self.model_name,
+                model=self.llm_model,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
                 timeout=None,
@@ -137,27 +136,27 @@ class LanguageModel:
                 top_p=self.top_p,
             )
 
-        elif self.provider == "ollama":
+        elif self.llm_provider == "ollama":
             self._ensure_model_pulled()
-            template = ollama.show(self.model_name)["template"]
+            template = ollama.show(self.llm_model)["template"]
             self.context_window_size = 8192
             self.chat_model = ChatOllama(
-                model=self.model_name,
+                model=self.llm_model,
                 keep_alive=0,
                 num_ctx=self.context_window_size,
                 temperature=self.temperature,
                 template=template,
             )
 
-        elif self.provider == "cerebras":
+        elif self.llm_provider == "cerebras":
             os.environ["CEREBRAS_API_KEY"] = os.getenv("CEREBRAS_API_KEY")
             self.chat_model = ChatCerebras(
-                model=self.model_name,
+                model=self.llm_model,
             )
 
         else:
             raise ValueError(
-                f"Unsupported provider: {self.provider}. Please choose from: groq, sambanova, github, google, ollama, cerebras"
+                f"Unsupported provider: {self.llm_provider}. Please choose from: groq, sambanova, github, google, ollama, cerebras"
             )
 
         self.chat_prompt_template = ChatPromptTemplate.from_messages([
@@ -169,7 +168,7 @@ class LanguageModel:
         """Ensures that an Ollama model is pulled before use."""
         try:
             subprocess.run(
-                ["ollama", "pull", self.model_name],
+                ["ollama", "pull", self.llm_model],
                 check=True,
                 capture_output=True,
                 text=True
@@ -190,7 +189,7 @@ class LanguageModel:
         if not tool_list:
             return self
 
-        if self.provider == "groq":
+        if self.llm_provider == "groq":
             formatted_tools = [
                 convert_to_openai_function(tool.func if isinstance(tool, StructuredTool) else tool)
                 for tool in tool_list
@@ -200,8 +199,8 @@ class LanguageModel:
             new_chat_model = self.chat_model.bind_tools(tool_list)
 
         new_session = LanguageModel(
-            model_name=self.model_name,
-            provider=self.provider,
+            llm_model=self.llm_model,
+            llm_provider=self.llm_provider,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
             top_k=self.top_k,
@@ -275,7 +274,7 @@ class LanguageModel:
 if __name__ == "__main__":
     # Test simple avec config dict
     config = {
-        'model_name': 'meta-llama/llama-4-maverick-17b-128e-instruct',
+        'llm_model': 'meta-llama/llama-4-maverick-17b-128e-instruct',
         'llm_provider': 'groq',
         'temperature': 0.7,
         'max_tokens': 128,
@@ -285,4 +284,3 @@ if __name__ == "__main__":
     }
     llm = LanguageModel(config=config)
     print(llm.answer("Quel est le sens de la vie ?"))
-  
