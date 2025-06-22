@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "free_llm_toolbox"
-version = "0.1.8"  # Incrémentation de la version
+version = "0.1.9"  # Incrémentation de la version
 description = "A Python toolbox for easy interaction with various LLMs and Vision models"
 readme = "README.md"
 authors = [{ name = "Yanis112" }]
