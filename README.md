@@ -140,6 +140,25 @@ for chunk in session.answer(
     print(chunk, end="", flush=True)
 ```
 
+## Special Option: `return_thinking_token`
+
+Some advanced models (reflective models like DeepSeek, Gemini, O3 Mini, O4 Mini) may return a special `<think>...</think>` block in their response, containing their internal reasoning. By default, this block is automatically removed from the final answer and only the user-facing output is returned.
+
+You can control this behavior with the `return_thinking_token` option:
+
+- `return_thinking_token=False` (default): The content between `<think>...</think>` is stripped from the response, and only the final answer is returned.
+- `return_thinking_token=True`: The full response, including the `<think>...</think>` block, is returned.
+
+**Example:**
+
+```python
+response = session.answer("Prompt...", return_thinking_token=False)
+# Output: Only the final answer, without the <think>...</think> block
+
+response = session.answer("Prompt...", return_thinking_token=True)
+# Output: The full response, including the <think>...</think> block if present
+```
+
 ### Vision Models 👁️
 
 ```python
@@ -165,6 +184,7 @@ print(description)
 
 | Provider    | Model                           | LLM Provider ID | Model ID                              | Price | Rate Limit (per min) | Context Window | Speed      |
 |------------|--------------------------------|----------------|---------------------------------------|-------|---------------------|----------------|------------|
+| SambaNova  | DeepSeek R1 0528 (Reflective)  | sambanova      | DeepSeek-R1-0528                      | Free  | 60                  | 32,000         | Ultra Fast |
 | SambaNova  | DeepSeek R1 670B               | sambanova      | DeepSeek-R1-0528                      | Free  | 60                  | 32,000         | Ultra Fast |
 | SambaNova  | Llama3 405B                   | sambanova      | llama3-405b                           | Free  | 60                  | 8,000          | Fast       |
 | GitHub     | Meta Llama 3.1 405B            | github         | meta-Llama-3.1-405B-Instruct          | Free  | 50                  | 8,192          | Fast       |

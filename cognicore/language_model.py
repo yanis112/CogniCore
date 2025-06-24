@@ -221,6 +221,7 @@ class LanguageModel:
         format_type: Optional[str] = None,
         tool_list: List[Any] = [],
         stream: bool = False,
+        return_thinking_token: bool = False,
     ) -> Union[str, Generator, tuple]:
         """
         Generate a response using the language model.
@@ -266,10 +267,17 @@ class LanguageModel:
                 raise ValueError(f"JSON parsing error: {e}")
 
         chain = self.chat_prompt_template | self.chat_model | StrOutputParser()
-        
+
+        import re
+        def strip_thinking(text):
+            return re.sub(r'<think>[\s\S]*?</think>', '', text, flags=re.IGNORECASE).strip()
+
         if stream:
             return chain.stream({"text": prompt})
-        return chain.invoke({"text": prompt})
+        response = chain.invoke({"text": prompt})
+        if not return_thinking_token and isinstance(response, str) and re.search(r'<think>[\s\S]*?</think>', response, re.IGNORECASE):
+            return strip_thinking(response)
+        return response
 
 if __name__ == "__main__":
     # Test simple avec config dict

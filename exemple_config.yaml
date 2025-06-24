@@ -5,6 +5,7 @@
 # =============================
 # These parameters are used by default for text generation, but can be overridden.
 # Supported LLM models/providers examples:
+#   - llm_model: "DeepSeek-R1-0528"                  llm_provider: "sambanova"
 #   - llm_model: "gemini-2.5-flash-preview-04-17"   llm_provider: "google"
 #   - llm_model: "llama-3-70b"                       llm_provider: "groq"
 #   - llm_model: "meta-llama/llama-4-scout-17b-16e-instruct" llm_provider: "groq"
@@ -79,6 +80,41 @@ rag_query_breaker_provider: "github"
 # Entity description parameters
 description_model_name: "gemma2:2b"
 description_llm_provider: "ollama"
+
+# =============================
+# Model Dictionaries
+# =============================
+# These dictionaries list available models and their providers.
+models_dict: {
+  "gemini-2.5-flash": "google",
+  "gemini-2.5-pro": "google",
+  "o3-mini": "github",
+  "deepseek-r1-distill-llama-70b": "groq",
+  "llama-3.3-70b-versatile": "groq",
+  "gpt-4o": "github",
+  "meta-Llama-3.1-405B-Instruct": "github",
+  "gpt-4o-mini": "github",
+  "o1-mini": "github",
+  "o1-preview": "github",
+  "llama3-405b": "sambanova",
+  "llama-3.1-8b-instant": "groq",
+  "llama-3.2-3b-preview": "groq",
+  "DeepSeek-R1": "github",
+  "llama-4-maverick-17b-128e-instruct": "groq",
+  "openai/gpt-4.1": "github",
+  "gemma-3n-e4b-it": "google"
+   }
+
+vision_model_dict: {
+  "gemini-2.5-flash": "gemini",
+  "gemini-2.5-pro": "gemini",
+  "gpt-4o-mini": "github",
+  "gpt-4o": "github",
+  "phi-4-multimodal-instruct": "github",
+  "meta-llama/llama-4-maverick-17b-128e-instruct": "groq",
+  "meta-llama/llama-4-scout-17b-16e-instruct": "groq",
+  "openai/gpt-4.1": "github",
+  "gemini-3n-e4b-it": "gemini" }
 
 # File paths
 watermark_removal_output_dir: "C:/Users/Yanis/Documents/AI Art/watermarked_removed"
