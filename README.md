@@ -395,3 +395,64 @@ image_classification_provider: "groq"
 
 - Parameters passed explicitly to the class take precedence over those in the config.
 - Prompts should be placed in the `prompts` folder.
+
+## Internet Search Utility: `InternetSearcher`
+
+`InternetSearcher` is a utility class for performing internet searches using language models with web-browsing capabilities. It provides a simple interface to search for real-time information on the internet using AI models that have web access.
+
+- **Provider Support**: Currently supports Groq provider with web-enabled models like "compound-beta"
+- **Flexible Configuration**: Supports the same flexible interface as other classes (manual arguments, config dictionary, or YAML config path)
+- **Streaming Support**: Can return results as a stream for real-time responses
+- **Customizable Parameters**: Allows customization of temperature, max_tokens, and other generation parameters
+
+### Usage Example
+
+```python
+from cognicore.internet_searcher_utils import InternetSearcher
+
+# Initialize with default settings
+searcher = InternetSearcher()
+
+# Or initialize with custom model
+searcher = InternetSearcher(
+    internet_search_model="compound-beta",
+    internet_search_provider="groq"
+)
+
+# Or using a YAML config file
+searcher = InternetSearcher(config="exemple_config.yaml")
+
+# Perform a search
+search_prompt = "What is the latest news about AI regulations in Europe?"
+result = searcher.search(search_prompt)
+print(result)
+
+# Streaming search
+for chunk in searcher.search(search_prompt, stream=True):
+    print(chunk, end="", flush=True)
+```
+
+### Constructor Arguments
+
+- `internet_search_model` (str): The name of the model to use for searching. Defaults to "compound-beta"
+- `internet_search_provider` (str): The provider of the model. Currently only "groq" is supported
+- `config` (dict, str, or None): Configuration dictionary or path to YAML config file
+
+### Search Method Arguments
+
+- `prompt` (str): The search query or prompt
+- `stream` (bool): Whether to stream the response. Defaults to False
+- `**kwargs`: Additional parameters (temperature, max_tokens, etc.) that override defaults
+
+### Example config section (from `exemple_config.yaml`)
+
+```yaml
+# Parameters for internet_searcher_utils.py
+internet_search_model: "compound-beta"
+internet_search_provider: "groq"
+temperature: 1.0
+max_tokens: 2048
+top_p: 1.0
+```
+
+**Note**: This utility requires the `GROQ_API_KEY` environment variable to be set, and currently only supports Groq's web-enabled models for internet searching capabilities.
